@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.preprocessing import normalize
+
 
 class PCAEigenFace:
     def __init__(self, num_components=10):
@@ -38,8 +38,20 @@ class PCAEigenFace:
     def calcEigenFaces(self):
         evt = np.transpose(self.eigenVectors)[:, 0:self.numComponents]
         self.eigenFaces = self.diffs * evt
-        self.eigenFaces = normalize(self.eigenFaces, axis=0, return_norm=False, norm='l2')
+        self.eigenFaces = np.linalg.norm(self.eigenFaces, axis=0)
 
     def calcProjections(self, persons):
         self.labels = map(lambda p: p.label, persons)
         self.projections = self.diffs * np.transpose(self.eigenFaces)
+
+    def predict(self, test_data):
+        diff = test_data - self.mean
+        weights = np.transpose(self.eigenFaces) * diff
+        distances = np.linalg.norm(weights-self.projections, axis=1)
+        min_index = np.argmin(distances)
+
+        label = self.labels[min_index]
+        confidence = distances[min_index]
+        reconstruction = (weights * self.eigenFaces) + self.mean
+        reconstruction_error = np.linalg.norm(test_data - reconstruction)
+        return label, confidence, reconstruction_error
